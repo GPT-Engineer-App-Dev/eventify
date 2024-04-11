@@ -21,14 +21,31 @@ const HomePage = ({ events, onAddEvent, onEditEvent }) => (
   </Box>
 );
 
-const CreateEventPage = ({ onSave }) => {
+const CreateEventPage = ({ onSave, onError }) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
 
-  const handleSubmit = () => {
-    onSave({ title, description });
-    setTitle("");
-    setDescription("");
+  const handleSubmit = async () => {
+    try {
+      const response = await fetch("http://localhost:1337/api/events", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: title, description }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create event");
+      }
+
+      const newEvent = await response.json();
+      onSave(newEvent);
+      setTitle("");
+      setDescription("");
+    } catch (error) {
+      onError(error.message);
+    }
   };
 
   return (
@@ -101,6 +118,7 @@ const Index = () => {
   const handleAddEvent = (newEvent) => {
     setEvents([...events, newEvent]);
     setCurrentPage("home");
+    setError(null);
   };
 
   const handleEditEvent = (index) => {
@@ -125,7 +143,7 @@ const Index = () => {
       </Flex>
       {error && <Text color="red.500">{error}</Text>}
       {currentPage === "home" && <HomePage events={events} onAddEvent={handleAddEvent} onEditEvent={handleEditEvent} />}
-      {currentPage === "create" && <CreateEventPage onSave={handleAddEvent} />}
+      {currentPage === "create" && <CreateEventPage onSave={handleAddEvent} onError={setError} />}
       {currentPage === "edit" && <EditEventPage event={events[selectedEventIndex]} onSave={handleUpdateEvent} />}
     </Box>
   );
