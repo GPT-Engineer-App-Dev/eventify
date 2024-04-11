@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Box, Heading, Button, Flex, Text, Input, Textarea, FormControl, FormLabel } from "@chakra-ui/react";
 import { FaPlus, FaEdit } from "react-icons/fa";
 
@@ -10,7 +10,7 @@ const HomePage = ({ events, onAddEvent, onEditEvent }) => (
     {events.map((event, index) => (
       <Box key={index} p={4} borderWidth={1} mb={4}>
         <Heading as="h2" size="md">
-          {event.title}
+          {event.name}
         </Heading>
         <Text>{event.description}</Text>
         <Button leftIcon={<FaEdit />} size="sm" onClick={() => onEditEvent(index)}>
@@ -79,6 +79,24 @@ const Index = () => {
   const [events, setEvents] = useState([]);
   const [currentPage, setCurrentPage] = useState("home");
   const [selectedEventIndex, setSelectedEventIndex] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const response = await fetch("http://localhost:1337/api/events");
+        if (!response.ok) {
+          throw new Error("Failed to fetch events");
+        }
+        const data = await response.json();
+        setEvents(data);
+      } catch (error) {
+        setError(error.message);
+      }
+    };
+
+    fetchEvents();
+  }, []);
 
   const handleAddEvent = (newEvent) => {
     setEvents([...events, newEvent]);
@@ -105,6 +123,7 @@ const Index = () => {
           Create Event
         </Button>
       </Flex>
+      {error && <Text color="red.500">{error}</Text>}
       {currentPage === "home" && <HomePage events={events} onAddEvent={handleAddEvent} onEditEvent={handleEditEvent} />}
       {currentPage === "create" && <CreateEventPage onSave={handleAddEvent} />}
       {currentPage === "edit" && <EditEventPage event={events[selectedEventIndex]} onSave={handleUpdateEvent} />}
