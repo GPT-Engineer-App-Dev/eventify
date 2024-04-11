@@ -66,12 +66,46 @@ const CreateEventPage = ({ onSave, onError }) => {
   );
 };
 
-const EditEventPage = ({ event, onSave }) => {
-  const [title, setTitle] = useState(event.title);
-  const [description, setDescription] = useState(event.description);
+const EditEventPage = ({ eventId, onSave, onError }) => {
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
 
-  const handleSubmit = () => {
-    onSave({ title, description });
+  useEffect(() => {
+    const fetchEvent = async () => {
+      try {
+        const response = await fetch(`http://localhost:1337/api/events/${eventId}`);
+        if (!response.ok) {
+          throw new Error("Failed to fetch event");
+        }
+        const data = await response.json();
+        setTitle(data.name);
+        setDescription(data.description);
+      } catch (error) {
+        onError(error.message);
+      }
+    };
+
+    fetchEvent();
+  }, [eventId, onError]);
+
+  const handleSubmit = async () => {
+    try {
+      const response = await fetch(`http://localhost:1337/api/events/${eventId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: title, description }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update event");
+      }
+
+      onSave();
+    } catch (error) {
+      onError(error.message);
+    }
   };
 
   return (
@@ -95,7 +129,7 @@ const EditEventPage = ({ event, onSave }) => {
 const Index = () => {
   const [events, setEvents] = useState([]);
   const [currentPage, setCurrentPage] = useState("home");
-  const [selectedEventIndex, setSelectedEventIndex] = useState(null);
+  const [selectedEventId, setSelectedEventId] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -121,16 +155,30 @@ const Index = () => {
     setError(null);
   };
 
-  const handleEditEvent = (index) => {
-    setSelectedEventIndex(index);
+  const handleEditEvent = (eventId) => {
+    setSelectedEventId(eventId);
     setCurrentPage("edit");
   };
 
-  const handleUpdateEvent = (updatedEvent) => {
-    const updatedEvents = [...events];
-    updatedEvents[selectedEventIndex] = updatedEvent;
-    setEvents(updatedEvents);
+  const handleUpdateEvent = () => {
     setCurrentPage("home");
+    setError(null);
+    
+   
+    const fetchEvents = async () => {
+      try {
+        const response = await fetch("http://localhost:1337/api/events");
+        if (!response.ok) {
+          throw new Error("Failed to fetch events");
+        }
+        const data = await response.json();
+        setEvents(data);
+      } catch (error) {
+        setError(error.message);
+      }
+    };
+
+    fetchEvents();
   };
 
   return (
@@ -144,7 +192,7 @@ const Index = () => {
       {error && <Text color="red.500">{error}</Text>}
       {currentPage === "home" && <HomePage events={events} onAddEvent={handleAddEvent} onEditEvent={handleEditEvent} />}
       {currentPage === "create" && <CreateEventPage onSave={handleAddEvent} onError={setError} />}
-      {currentPage === "edit" && <EditEventPage event={events[selectedEventIndex]} onSave={handleUpdateEvent} />}
+      {currentPage === "edit" && <EditEventPage eventId={selectedEventId} onSave={handleUpdateEvent} onError={setError} />}
     </Box>
   );
 };
